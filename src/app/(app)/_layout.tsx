@@ -27,6 +27,13 @@ export default function AppLayout() {
       />
       <Stack.Screen name="suppliers" options={{ headerShown: false }} />
       <Stack.Screen name="purchases" options={{ headerShown: false }} />
+      <Stack.Screen name="cash" options={{ headerShown: false }} />
+      <Stack.Screen name="credits" options={{ headerShown: false }} />
+      <Stack.Screen name="expenses" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="cash-settings"
+        options={{ headerShown: true, title: 'Config. caja', presentation: 'card' }}
+      />
     </Stack>
   );
 }

@@ -12,6 +12,9 @@ export type AppModuleId =
   | 'purchases'
   | 'suppliers'
   | 'customers'
+  | 'credits'
+  | 'cash'
+  | 'expenses'
   | 'reports'
   | 'admin';
 
@@ -44,6 +47,7 @@ export const MODULE_LABELS: Record<string, string> = {
   customers: 'Clientes',
   credits: 'Créditos',
   cash: 'Caja',
+  expenses: 'Gastos',
   reports: 'Reportes',
   users: 'Usuarios',
   roles: 'Roles',
@@ -74,7 +78,6 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     mdIcon: 'point_of_sale',
     quickAction: true,
     quickOrder: 1,
-    comingSoon: true,
   },
   {
     id: 'sales-list',
@@ -87,7 +90,39 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     mdIcon: 'receipt_long',
     quickAction: true,
     quickOrder: 4,
-    comingSoon: true,
+  },
+  {
+    id: 'cash',
+    moduleId: 'cash',
+    title: 'Caja',
+    description: 'Apertura, movimientos y cierre',
+    href: '/cash',
+    permission: 'cash.view',
+    mdIcon: 'account_balance_wallet',
+    quickAction: true,
+    quickOrder: 0,
+  },
+  {
+    id: 'credits',
+    moduleId: 'credits',
+    title: 'Créditos',
+    description: 'Cuentas por cobrar y abonos',
+    href: '/credits',
+    permission: 'credits.view',
+    mdIcon: 'credit_score',
+    quickAction: true,
+    quickOrder: 5,
+  },
+  {
+    id: 'expenses',
+    moduleId: 'expenses',
+    title: 'Gastos',
+    description: 'Salidas de dinero y categorías',
+    href: '/expenses',
+    permission: 'expenses.view',
+    mdIcon: 'receipt',
+    quickAction: true,
+    quickOrder: 8,
   },
   {
     id: 'products',
@@ -123,7 +158,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     feature: 'purchases',
     mdIcon: 'shopping_cart',
     quickAction: true,
-    quickOrder: 6,
+    quickOrder: 7,
   },
   {
     id: 'suppliers',
@@ -145,7 +180,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     feature: 'customers',
     mdIcon: 'groups',
     quickAction: true,
-    quickOrder: 5,
+    quickOrder: 6,
   },
   {
     id: 'reports',

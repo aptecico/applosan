@@ -153,7 +153,7 @@ export type InventoryLot = {
 };
 
 export type InventoryBalanceRow = InventoryBalance & {
-  products: Pick<Product, 'id' | 'name' | 'sku' | 'sale_price'> | null;
+  products: Pick<Product, 'id' | 'name' | 'sku' | 'sale_price' | 'min_stock'> | null;
   branches: { id: string; name: string; code: string } | null;
 };
 

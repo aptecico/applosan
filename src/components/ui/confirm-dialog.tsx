@@ -1,16 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import {
-  Keyboard,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
+import { KeyboardSafeModal } from '@/components/ui/keyboard-safe-modal';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -40,83 +33,61 @@ export function ConfirmDialog({
   children,
 }: Props) {
   const theme = useTheme();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    if (!visible) {
-      setKeyboardHeight(0);
-      return;
-    }
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [visible]);
 
   return (
-    <Modal animationType="fade" transparent visible={visible} onRequestClose={onCancel}>
+    <KeyboardSafeModal
+      visible={visible}
+      onClose={loading ? () => undefined : onCancel}
+      placement="center"
+      maxHeightRatio={0.9}
+      closeOnBackdrop={!loading}
+      contentStyle={styles.dialogReset}>
       <Pressable
-        style={[
-          styles.backdrop,
-          {
-            backgroundColor: theme.overlay,
-            paddingBottom: Platform.OS === 'ios' ? keyboardHeight + Spacing.three : Spacing.four,
-            justifyContent: keyboardHeight > 0 ? 'flex-end' : 'center',
-          },
-        ]}
-        onPress={loading ? undefined : onCancel}>
-        <Pressable
-          style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-          onPress={(event) => event.stopPropagation()}>
-          <ThemedText type="section">{title}</ThemedText>
-          {message ? <ThemedText themeColor="textSecondary">{message}</ThemedText> : null}
-          {children ? (
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              style={styles.childrenScroll}
-              contentContainerStyle={styles.childrenContent}>
-              {children}
-            </ScrollView>
-          ) : null}
-          <View style={styles.actions}>
-            <AppButton
-              title={cancelLabel}
-              variant="ghost"
-              disabled={loading}
-              onPress={onCancel}
-              style={styles.flex}
-            />
-            <AppButton
-              title={confirmLabel}
-              variant={destructive ? 'danger' : 'primary'}
-              loading={loading}
-              onPress={onConfirm}
-              style={styles.flex}
-            />
-          </View>
-        </Pressable>
+        style={[styles.card, { backgroundColor: theme.surfaceElevated }]}
+        onPress={(event) => event.stopPropagation()}>
+        <ThemedText type="section">{title}</ThemedText>
+        {message ? <ThemedText themeColor="textSecondary">{message}</ThemedText> : null}
+        {children ? (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            style={styles.childrenScroll}
+            contentContainerStyle={styles.childrenContent}>
+            {children}
+          </ScrollView>
+        ) : null}
+        <View style={styles.actions}>
+          <AppButton
+            title={cancelLabel}
+            variant="ghost"
+            disabled={loading}
+            onPress={onCancel}
+            style={styles.flex}
+          />
+          <AppButton
+            title={confirmLabel}
+            variant={destructive ? 'danger' : 'primary'}
+            loading={loading}
+            onPress={onConfirm}
+            style={styles.flex}
+          />
+        </View>
       </Pressable>
-    </Modal>
+    </KeyboardSafeModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    padding: Spacing.four,
+  dialogReset: {
+    // KeyboardSafeModal already paints surface; keep inner padding only.
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    overflow: 'visible',
   },
   card: {
     borderRadius: Radii.lg,
-    borderWidth: 1,
     padding: Spacing.four,
     gap: Spacing.three,
-    maxHeight: '92%',
   },
   childrenScroll: {
     maxHeight: 320,

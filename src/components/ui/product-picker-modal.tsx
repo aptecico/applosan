@@ -1,21 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
-  Keyboard,
-  Modal,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import { IconButton } from '@/components/ui/icon-button';
+import { KeyboardSafeModal } from '@/components/ui/keyboard-safe-modal';
 import { ListRow } from '@/components/ui/list-row';
 import { StockBadge } from '@/components/ui/stock-badge';
 import {
@@ -27,9 +24,11 @@ import {
 } from '@/constants/theme';
 import { ProductEditor } from '@/features/products/product-editor';
 import { formatMoneyCOP, productMetaLine } from '@/features/purchases/purchase-format';
+import { dismissKeyboard } from '@/hooks/use-keyboard-bottom-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { useWorkspace } from '@/features/tenants/workspace-provider';
 import type { Product } from '@/types/catalog';
+import { resolveMinStock } from '@/utils/stock';
 
 type Props = {
   visible: boolean;
@@ -37,7 +36,6 @@ type Props = {
   stockByProductId?: Record<string, number>;
   onClose: () => void;
   onSelect: (product: Product) => void;
-  /** Called when a product is created inline so the parent can refresh its catalog. */
   onProductCreated?: (product: Product) => void;
   title?: string;
 };
@@ -70,12 +68,10 @@ export function ProductPickerModal({
   title = 'Seleccionar producto',
 }: Props) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const { hasPermission } = useWorkspace();
+  const { width } = useWindowDimensions();
+  const { hasPermission, settings } = useWorkspace();
   const [query, setQuery] = useState('');
   const [scanHint, setScanHint] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [creating, setCreating] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const isDesktop = width >= 768;
@@ -91,29 +87,8 @@ export function ProductPickerModal({
       setQuery('');
       setScanHint(false);
       setCreating(false);
-      setKeyboardHeight(0);
-      return;
     }
-
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
   }, [visible]);
-
-  function dismissKeyboard() {
-    Keyboard.dismiss();
-  }
 
   function handleSelect(product: Product) {
     dismissKeyboard();
@@ -130,7 +105,6 @@ export function ProductPickerModal({
     setCreating(false);
     setQuery('');
     onProductCreated?.(product);
-    // Auto-continue into quantity/price step without leaving the purchase.
     onSelect(product);
     onClose();
   }
@@ -140,75 +114,53 @@ export function ProductPickerModal({
     inputRef.current?.focus();
   }
 
-  // Keep the sheet above the keyboard; shrink height so header + search stay visible.
-  const keyboardInset = Platform.OS === 'web' ? 0 : keyboardHeight;
-  const topGuard = Math.max(insets.top, Spacing.three);
-  const availableHeight = Math.max(280, height - keyboardInset - topGuard);
-  const sheetHeight = Math.min(
-    isDesktop ? Math.min(height * 0.85, 640) : height * 0.88,
-    availableHeight,
-  );
+  function requestClose() {
+    if (creating) {
+      setCreating(false);
+      return;
+    }
+    dismissKeyboard();
+    onClose();
+  }
 
   return (
-    <Modal
-      animationType="slide"
-      transparent
+    <KeyboardSafeModal
       visible={visible}
-      onRequestClose={() => {
-        if (creating) {
-          setCreating(false);
-          return;
-        }
-        onClose();
-      }}>
-      <View
-        style={[
-          styles.backdrop,
-          { backgroundColor: theme.overlay },
-          isDesktop && styles.backdropCentered,
-          !isDesktop && { paddingBottom: keyboardInset },
-        ]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar" />
+      onClose={requestClose}
+      placement={isDesktop ? 'center' : 'bottom'}
+      maxHeightRatio={isDesktop ? 0.85 : 0.92}
+      closeOnBackdrop={!creating}>
+      <View style={styles.sheetBody}>
+        {!isDesktop ? (
+          <View style={[styles.handle, { backgroundColor: theme.border }]} />
+        ) : null}
 
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.surfaceElevated,
-              borderColor: theme.border,
-              height: sheetHeight,
-              maxHeight: sheetHeight,
-            },
-            isDesktop && styles.sheetDesktop,
-          ]}>
-          {!isDesktop ? (
-            <View style={[styles.handle, { backgroundColor: theme.border }]} />
-          ) : null}
-
-          {creating ? (
-            <>
-              <View style={styles.header}>
-                <View style={styles.headerText}>
-                  <ThemedText type="smallBold">Crear producto</ThemedText>
-                  <ThemedText type="small" themeColor="textMuted" style={styles.headerSub}>
-                    Sin salir de la compra
-                  </ThemedText>
-                </View>
-                <IconButton
-                  icon="close"
-                  label="Volver al buscador"
-                  onPress={() => setCreating(false)}
-                />
+        {creating ? (
+          <>
+            <View style={styles.header}>
+              <View style={styles.headerText}>
+                <ThemedText type="smallBold">Crear producto</ThemedText>
+                <ThemedText type="small" themeColor="textMuted" style={styles.headerSub}>
+                  Sin salir de la compra
+                </ThemedText>
               </View>
-              <ProductEditor
-                embedded
-                initialName={query}
-                onCancel={() => setCreating(false)}
-                onSaved={onCreated}
+              <IconButton
+                icon="close"
+                label="Volver al buscador"
+                onPress={() => setCreating(false)}
               />
-            </>
-          ) : (
-            <>
+            </View>
+            <ProductEditor
+              embedded
+              initialName={query}
+              onCancel={() => setCreating(false)}
+              onSaved={onCreated}
+            />
+          </>
+        ) : (
+          <>
+            {/* Header + search stay pinned; only the list shrinks when keyboard opens. */}
+            <View style={styles.stickyTop}>
               <View style={styles.header}>
                 <View style={styles.headerText}>
                   <ThemedText type="smallBold">{title}</ThemedText>
@@ -216,14 +168,7 @@ export function ProductPickerModal({
                     Busca en el catálogo o escanea código
                   </ThemedText>
                 </View>
-                <IconButton
-                  icon="close"
-                  label="Cerrar"
-                  onPress={() => {
-                    dismissKeyboard();
-                    onClose();
-                  }}
-                />
+                <IconButton icon="close" label="Cerrar" onPress={requestClose} />
               </View>
 
               <View style={styles.searchRow}>
@@ -274,117 +219,120 @@ export function ProductPickerModal({
                   <AppIcon name="barcode" size={20} color={theme.info} />
                 </Pressable>
               </View>
+            </View>
 
-              <FlatList
-                data={results}
-                keyExtractor={(item) => item.id}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                onScrollBeginDrag={dismissKeyboard}
-                style={styles.list}
-                contentContainerStyle={styles.listContent}
-                ItemSeparatorComponent={() => (
-                  <View style={[styles.separator, { backgroundColor: theme.border }]} />
-                )}
-                ListEmptyComponent={
-                  <View style={styles.empty}>
-                    <ThemedText type="smallBold">No encontramos productos</ThemedText>
-                    <ThemedText themeColor="textSecondary" style={styles.emptyCopy}>
-                      {query.trim()
-                        ? `No existe un producto que coincida con “${query.trim()}”.`
-                        : 'Todavía no hay productos en el catálogo.'}
+            <FlatList
+              data={results}
+              keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onScrollBeginDrag={dismissKeyboard}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              ItemSeparatorComponent={() => (
+                <View style={[styles.separator, { backgroundColor: theme.border }]} />
+              )}
+              ListEmptyComponent={
+                <View style={styles.empty}>
+                  <ThemedText type="smallBold">No encontramos productos</ThemedText>
+                  <ThemedText themeColor="textSecondary" style={styles.emptyCopy}>
+                    {query.trim()
+                      ? `No existe un producto que coincida con “${query.trim()}”.`
+                      : 'Todavía no hay productos en el catálogo.'}
+                  </ThemedText>
+                  {canCreate ? (
+                    <AppButton
+                      title="Crear producto"
+                      icon="plus"
+                      onPress={openCreate}
+                      style={styles.emptyCta}
+                    />
+                  ) : null}
+                </View>
+              }
+              ListFooterComponent={
+                results.length > 0 && canCreate ? (
+                  <View style={styles.createFooter}>
+                    <ThemedText type="small" themeColor="textMuted">
+                      ¿No encuentras el producto?
                     </ThemedText>
-                    {canCreate ? (
-                      <AppButton
-                        title="Crear producto"
-                        icon="plus"
-                        onPress={openCreate}
-                        style={styles.emptyCta}
-                      />
-                    ) : null}
+                    <AppButton
+                      title="Crear producto"
+                      icon="plus"
+                      variant="secondary"
+                      onPress={openCreate}
+                    />
                   </View>
-                }
-                ListFooterComponent={
-                  results.length > 0 && canCreate ? (
-                    <View style={styles.createFooter}>
-                      <ThemedText type="small" themeColor="textMuted">
-                        ¿No encuentras el producto?
+                ) : null
+              }
+              renderItem={({ item }) => {
+                const meta = productMetaLine(item);
+                const stock = stockByProductId?.[item.id];
+                return (
+                  <ListRow
+                    density="compact"
+                    bordered={false}
+                    accessibilityLabel={`Añadir ${item.name}`}
+                    onPress={() => handleSelect(item)}
+                    trailing={
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Añadir ${item.name}`}
+                        hitSlop={6}
+                        onPress={() => handleSelect(item)}
+                        style={({ pressed }) => [
+                          styles.addBtn,
+                          {
+                            backgroundColor: pressed
+                              ? theme.backgroundSelected
+                              : withAlpha(theme.accent, 0.12),
+                            borderColor: withAlpha(theme.accent, 0.28),
+                          },
+                        ]}>
+                        <AppIcon name="plus" size={14} themeColor="accent" />
+                        <ThemedText type="smallBold" themeColor="accent" style={styles.addLabel}>
+                          Añadir
+                        </ThemedText>
+                      </Pressable>
+                    }>
+                    <ThemedText type="smallBold" numberOfLines={1}>
+                      {item.name}
+                    </ThemedText>
+                    {meta ? (
+                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                        {meta}
                       </ThemedText>
-                      <AppButton
-                        title="Crear producto"
-                        icon="plus"
-                        variant="secondary"
-                        onPress={openCreate}
+                    ) : null}
+                    <View style={styles.metaRow}>
+                      <StockBadge
+                        quantity={stock}
+                        minStock={resolveMinStock(
+                          item.min_stock,
+                          settings?.default_min_stock,
+                        )}
                       />
-                    </View>
-                  ) : null
-                }
-                renderItem={({ item }) => {
-                  const meta = productMetaLine(item);
-                  const stock = stockByProductId?.[item.id];
-                  return (
-                    <ListRow
-                      density="compact"
-                      bordered={false}
-                      accessibilityLabel={`Añadir ${item.name}`}
-                      onPress={() => handleSelect(item)}
-                      trailing={
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`Añadir ${item.name}`}
-                          hitSlop={6}
-                          onPress={() => handleSelect(item)}
-                          style={({ pressed }) => [
-                            styles.addBtn,
-                            {
-                              backgroundColor: pressed
-                                ? theme.backgroundSelected
-                                : withAlpha(theme.accent, 0.12),
-                              borderColor: withAlpha(theme.accent, 0.28),
-                            },
-                          ]}>
-                          <AppIcon name="plus" size={14} themeColor="accent" />
-                          <ThemedText
-                            type="smallBold"
-                            themeColor="accent"
-                            style={styles.addLabel}>
-                            Añadir
-                          </ThemedText>
-                        </Pressable>
-                      }>
-                      <ThemedText type="smallBold" numberOfLines={1}>
-                        {item.name}
-                      </ThemedText>
-                      {meta ? (
-                        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                          {meta}
+                      {item.sale_price > 0 ? (
+                        <ThemedText type="small" themeColor="textMuted">
+                          PVP {formatMoneyCOP(item.sale_price)}
                         </ThemedText>
                       ) : null}
-                      <View style={styles.metaRow}>
-                        <StockBadge quantity={stock} />
-                        {item.sale_price > 0 ? (
-                          <ThemedText type="small" themeColor="textMuted">
-                            PVP {formatMoneyCOP(item.sale_price)}
-                          </ThemedText>
-                        ) : null}
-                      </View>
-                    </ListRow>
-                  );
-                }}
-              />
+                    </View>
+                  </ListRow>
+                );
+              }}
+            />
 
-              <View style={[styles.footer, { borderTopColor: theme.border }]}>
-                <ThemedText type="small" themeColor="textMuted">
-                  {results.length === products.length
-                    ? `${products.length} productos`
-                    : `${results.length} de ${products.length} productos`}
-                </ThemedText>
-              </View>
-            </>
-          )}
-        </View>
+            <View style={[styles.footer, { borderTopColor: theme.border }]}>
+              <ThemedText type="small" themeColor="textMuted">
+                {results.length === products.length
+                  ? `${products.length} productos`
+                  : `${results.length} de ${products.length} productos`}
+              </ThemedText>
+            </View>
+          </>
+        )}
       </View>
-    </Modal>
+    </KeyboardSafeModal>
   );
 }
 
@@ -398,27 +346,12 @@ function withAlpha(hex: string, alpha: number) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  sheetBody: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdropCentered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.four,
-  },
-  sheet: {
-    borderTopLeftRadius: Radii.lg,
-    borderTopRightRadius: Radii.lg,
-    borderWidth: 1,
-    width: '100%',
     paddingTop: Spacing.two,
-    overflow: 'hidden',
-    zIndex: 2,
   },
-  sheetDesktop: {
-    borderRadius: Radii.lg,
-    maxWidth: 520,
+  stickyTop: {
+    flexShrink: 0,
   },
   handle: {
     alignSelf: 'center',
@@ -474,6 +407,7 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    minHeight: 0,
   },
   listContent: {
     paddingBottom: Spacing.two,
@@ -524,6 +458,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   footer: {
+    flexShrink: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Density.compact.rowPaddingX,
     paddingVertical: Spacing.two,

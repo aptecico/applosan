@@ -106,6 +106,7 @@ export type TenantSettings = {
   default_min_stock: number;
   allow_credit_sales: boolean;
   allow_partial_payments: boolean;
+  default_opening_cash: number;
   business_name: string | null;
   invoice_name: string | null;
   extra: Record<string, unknown>;

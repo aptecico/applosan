@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 
@@ -8,6 +8,7 @@ import { AppButton } from '@/components/ui/app-button';
 import { AppTextField } from '@/components/ui/app-text-field';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { KeyboardSafeScrollView } from '@/components/ui/keyboard-safe-scroll-view';
 import { ProductPickerModal } from '@/components/ui/product-picker-modal';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
 import { Screen } from '@/components/ui/screen';
@@ -353,9 +354,8 @@ export function PurchaseFormScreen() {
   return (
     <Screen scroll={false} contentStyle={styles.flex}>
       <View style={styles.layout}>
-        <ScrollView
+        <KeyboardSafeScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
           style={styles.flex}>
           <View style={styles.header}>
             <ThemedText type="heading">
@@ -528,7 +528,7 @@ export function PurchaseFormScreen() {
           {error ? <ThemedText themeColor="destructive">{error}</ThemedText> : null}
 
           <AppButton title="Cancelar" variant="ghost" onPress={requestLeave} />
-        </ScrollView>
+        </KeyboardSafeScrollView>
 
         <View
           style={[

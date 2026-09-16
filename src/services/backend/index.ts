@@ -53,6 +53,7 @@ export {
   listPurchaseAudit,
   listInventoryBalances,
   listLotsForProduct,
+  listInventoryMovements,
 } from '@/services/supabase/purchases';
 export {
   listCustomers,
@@ -60,3 +61,32 @@ export {
   type Customer,
   type CustomerInput,
 } from '@/services/supabase/customers';
+export {
+  getOpenCashSession,
+  openCashSession,
+  closeCashSession,
+  listCashSessions,
+  getCashSession,
+  getCashSessionSummary,
+  listCashMovements,
+  registerCashMovement,
+} from '@/services/supabase/cash';
+export {
+  listExpenseCategories,
+  createExpenseCategory,
+  updateExpenseCategory,
+  listExpenses,
+  getExpense,
+  createExpense,
+  cancelExpense,
+  updateTenantCashSettings,
+} from '@/services/supabase/expenses';
+export {
+  listSales,
+  getSale,
+  createSale,
+  listReceivables,
+  getReceivable,
+  listCreditPayments,
+  registerCreditPayment,
+} from '@/services/supabase/sales';

@@ -34,5 +34,33 @@ export function getAuthErrorMessage(error: unknown): string {
     return 'Faltan los roles del sistema en la base de datos.';
   }
 
+  // Prefer Spanish business messages raised by SECURITY DEFINER RPCs
+  if (
+    message.includes('Caja') ||
+    message.includes('caja') ||
+    message.includes('venta') ||
+    message.includes('abono') ||
+    message.includes('transferencia') ||
+    message.includes('efectivo') ||
+    message.includes('permiso') ||
+    message.includes('crédito') ||
+    message.includes('credito') ||
+    message.includes('Stock') ||
+    message.includes('stock') ||
+    message.includes('cliente') ||
+    message.includes('monto') ||
+    message.includes('concepto') ||
+    message.includes('referencia') ||
+    message.includes('gasto') ||
+    message.includes('Gasto') ||
+    message.includes('categoría')
+  ) {
+    return message.replace(/^.*ERROR:\s*/i, '').split('\n')[0]?.trim() || message;
+  }
+
+  if (normalized.includes('register_cash_movement') || normalized.includes('create_sale')) {
+    return 'No fue posible completar la operación. Verifica los datos e inténtalo nuevamente.';
+  }
+
   return message || 'Ocurrió un error inesperado.';
 }

@@ -12,6 +12,7 @@ export type AppIconName =
   | 'ban'
   | 'search'
   | 'plus'
+  | 'minus'
   | 'save'
   | 'moreVertical'
   | 'history'
@@ -23,7 +24,19 @@ export type AppIconName =
   | 'building'
   | 'chevronRight'
   | 'check'
-  | 'barcode';
+  | 'barcode'
+  | 'cart'
+  | 'wallet'
+  | 'users'
+  | 'truck'
+  | 'chart'
+  | 'warning'
+  | 'creditCard'
+  | 'receipt'
+  | 'home'
+  | 'inventory'
+  | 'arrowUp'
+  | 'arrowDown';
 
 type AppIconProps = {
   name: AppIconName;
@@ -40,6 +53,7 @@ const ICON_MAP = {
   ban: { ios: 'nosign', android: 'block', web: 'block' },
   search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
   plus: { ios: 'plus', android: 'add', web: 'add' },
+  minus: { ios: 'minus', android: 'remove', web: 'remove' },
   save: { ios: 'square.and.arrow.down', android: 'save', web: 'save' },
   moreVertical: { ios: 'ellipsis', android: 'more_vert', web: 'more_vert' },
   history: { ios: 'clock.arrow.circlepath', android: 'history', web: 'history' },
@@ -52,6 +66,18 @@ const ICON_MAP = {
   chevronRight: { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
   check: { ios: 'checkmark', android: 'check', web: 'check' },
   barcode: { ios: 'barcode', android: 'qr_code_scanner', web: 'qr_code_scanner' },
+  cart: { ios: 'cart', android: 'shopping_cart', web: 'shopping_cart' },
+  wallet: { ios: 'wallet.pass', android: 'account_balance_wallet', web: 'account_balance_wallet' },
+  users: { ios: 'person.2', android: 'groups', web: 'groups' },
+  truck: { ios: 'truck.box', android: 'local_shipping', web: 'local_shipping' },
+  chart: { ios: 'chart.bar', android: 'bar_chart', web: 'bar_chart' },
+  warning: { ios: 'exclamationmark.triangle', android: 'warning', web: 'warning' },
+  creditCard: { ios: 'creditcard', android: 'credit_card', web: 'credit_card' },
+  receipt: { ios: 'doc.text', android: 'receipt_long', web: 'receipt_long' },
+  home: { ios: 'house', android: 'home', web: 'home' },
+  inventory: { ios: 'shippingbox.fill', android: 'warehouse', web: 'warehouse' },
+  arrowUp: { ios: 'arrow.up.circle', android: 'arrow_upward', web: 'arrow_upward' },
+  arrowDown: { ios: 'arrow.down.circle', android: 'arrow_downward', web: 'arrow_downward' },
 } as const;
 
 export function AppIcon({ name, size = 20, color, themeColor = 'text', style }: AppIconProps) {

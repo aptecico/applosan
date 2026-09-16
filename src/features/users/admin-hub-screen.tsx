@@ -62,6 +62,18 @@ export function AdminHubScreen() {
           </Link>
         </Card>
       ) : null}
+
+      {hasPermission('settings.view') || hasPermission('settings.update') ? (
+        <Card>
+          <ThemedText type="section">Caja y gastos</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            Efectivo inicial predeterminado y categorías de gastos.
+          </ThemedText>
+          <Link href={'/cash-settings' as Href} asChild>
+            <AppButton title="Configurar caja" variant="secondary" />
+          </Link>
+        </Card>
+      ) : null}
     </Screen>
   );
 }

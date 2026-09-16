@@ -14,6 +14,15 @@ export function canAccessItem(
   if (item.id === 'admin') {
     return canAccessAdmin(permissions);
   }
+  if (item.id === 'cash') {
+    return permissions.includes('cash.view') || permissions.includes('cash.open');
+  }
+  if (item.id === 'credits') {
+    return permissions.includes('credits.view') || permissions.includes('credits.payments');
+  }
+  if (item.id === 'expenses') {
+    return permissions.includes('expenses.view') || permissions.includes('expenses.create');
+  }
   if (!permissions.includes(item.permission)) {
     return false;
   }
@@ -28,6 +37,9 @@ export function getVisibleModules(permissions: string[], features: string[]): Ap
   const hubIds = new Set([
     'dashboard',
     'sales-list',
+    'cash',
+    'credits',
+    'expenses',
     'products',
     'inventory',
     'purchases',

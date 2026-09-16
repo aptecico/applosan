@@ -3,29 +3,32 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { computeStockLevel, type StockLevel } from '@/utils/stock';
 
-export type StockLevel = 'ok' | 'low' | 'out' | 'unknown';
+export type { StockLevel };
 
 type StockBadgeProps = {
   quantity?: number | null;
-  /** Units at or below this count as low stock. */
+  /** Prefer product.min_stock (via resolveMinStock). */
+  minStock?: number | null;
+  /**
+   * @deprecated Use minStock. Kept for call-site migration.
+   */
   lowThreshold?: number;
 };
 
 export function stockLevelFromQty(
   quantity?: number | null,
-  lowThreshold = 5,
+  minStockOrThreshold: number | null | undefined = 0,
 ): StockLevel {
-  if (quantity == null || Number.isNaN(quantity)) return 'unknown';
-  if (quantity <= 0) return 'out';
-  if (quantity <= lowThreshold) return 'low';
-  return 'ok';
+  return computeStockLevel(quantity, minStockOrThreshold);
 }
 
 /** Discrete stock chip — readable in light and dark without loud fills. */
-export function StockBadge({ quantity, lowThreshold = 5 }: StockBadgeProps) {
+export function StockBadge({ quantity, minStock, lowThreshold }: StockBadgeProps) {
   const theme = useTheme();
-  const level = stockLevelFromQty(quantity, lowThreshold);
+  const threshold = minStock ?? lowThreshold ?? 0;
+  const level = computeStockLevel(quantity, threshold);
 
   if (level === 'unknown') {
     return (
@@ -35,7 +38,8 @@ export function StockBadge({ quantity, lowThreshold = 5 }: StockBadgeProps) {
     );
   }
 
-  const label = level === 'out' ? 'Sin stock' : `${quantity} uds`;
+  const label =
+    level === 'out' ? 'Sin stock' : level === 'low' ? 'Stock bajo' : `${quantity} uds`;
   const color =
     level === 'ok' ? theme.success : level === 'low' ? theme.warning : theme.destructive;
 

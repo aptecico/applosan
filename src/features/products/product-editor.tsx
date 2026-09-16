@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { AppButton } from '@/components/ui/app-button';
 import { AppTextField } from '@/components/ui/app-text-field';
 import { Card } from '@/components/ui/card';
+import { KeyboardSafeScrollView } from '@/components/ui/keyboard-safe-scroll-view';
 import { MinTouchTarget, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useWorkspace } from '@/features/tenants/workspace-provider';
@@ -232,12 +233,12 @@ export function ProductEditor({
 
   if (embedded) {
     return (
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
+      <KeyboardSafeScrollView
         contentContainerStyle={styles.embedScroll}
-        style={styles.embed}>
+        style={styles.embed}
+        bottomPadding={Spacing.three}>
         {body}
-      </ScrollView>
+      </KeyboardSafeScrollView>
     );
   }
 

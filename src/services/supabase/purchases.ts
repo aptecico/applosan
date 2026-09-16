@@ -210,7 +210,7 @@ export async function listInventoryBalances() {
     { data: branches, error: branchesError },
   ] = await Promise.all([
     supabase.from('inventory_balances').select('tenant_id, branch_id, product_id, qty_on_hand, open_lots'),
-    supabase.from('products').select('id, name, sku, sale_price'),
+    supabase.from('products').select('id, name, sku, sale_price, min_stock'),
     supabase.from('branches').select('id, name, code'),
   ]);
 
@@ -236,6 +236,7 @@ export async function listInventoryBalances() {
               name: product.name,
               sku: product.sku,
               sale_price: Number(product.sale_price),
+              min_stock: Number(product.min_stock ?? 0),
             }
           : null,
         branches: branchMap.get(row.branch_id) ?? null,
@@ -270,4 +271,24 @@ export async function listLotsForProduct(productId: string, branchId?: string) {
     qty_remaining: Number(row.qty_remaining),
     unit_cost: Number(row.unit_cost),
   })) as InventoryLot[];
+}
+
+export async function listInventoryMovements(limit = 80) {
+  const { data, error } = await supabase
+    .from('inventory_movements')
+    .select(
+      'id, tenant_id, branch_id, product_id, movement_type, quantity, unit_cost, reference_type, reference_id, summary, created_by, created_at, products(id, name, sku), branches(id, name)',
+    )
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(getAuthErrorMessage(error));
+
+  return (data ?? []).map((row) => ({
+    ...row,
+    quantity: Number(row.quantity),
+    unit_cost: row.unit_cost == null ? null : Number(row.unit_cost),
+    products: firstRelation(row.products as never),
+    branches: firstRelation(row.branches as never),
+  }));
 }

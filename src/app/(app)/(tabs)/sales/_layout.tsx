@@ -5,6 +5,7 @@ export default function SalesLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Ventas', headerShown: true }} />
       <Stack.Screen name="new" options={{ title: 'Nueva venta', headerShown: true }} />
+      <Stack.Screen name="[id]" options={{ title: 'Detalle venta', headerShown: true }} />
     </Stack>
   );
 }
